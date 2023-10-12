@@ -1,0 +1,107 @@
+---
+title: "HW 4.2"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+Run Packages and Import Data
+```{r}
+library("cluster")
+library("knitr")
+
+# built in kmeans function
+# function (x, centers, iter.max = 10L, nstart = 1L, algorithm = c("Hartigan-Wong", 
+# "Lloyd", "Forgy", "MacQueen"), trace = FALSE) 
+
+data <- read.table("iris.txt")
+
+# remove species label (categorical RESPONSE variable, should not be used to build model)
+nosp_iris <- iris[, -5]
+print(nosp_iris)
+```
+Set Sed and Run Model
+
+```{r}
+# kmeans fit to train
+set.seed(3283) # set random seed
+kmeansmodel <- kmeans(nosp_iris, centers = 3, nstart = 30, algorithm = "Lloyd")
+# 3 centers to start to check which combination of predictors is the best (3 types of species)
+# using 30 (relatively big number) for number of starts to avoid getting stuck in undesirable local optimum
+# using default Lloyd algorithm for kmeans
+```
+
+Find the Best Combination of Predictors by Graphing
+```{r}
+# Find best combination of predictors
+
+par(mfrow = c(2, 2)) # set plots next to each other
+
+# sepal length and width
+plot(nosp_iris[c("Sepal.Length", "Sepal.Width")], 
+     col = kmeansmodel$cluster, 
+     main = "Sepal Length and Sepal Width")
+
+# petal length and width
+plot(nosp_iris[c("Petal.Length", "Petal.Width")], 
+     col = kmeansmodel$cluster, 
+     main = "Petal Length and Petal Width")
+
+# sepal length and petal width
+plot(nosp_iris[c("Sepal.Length", "Petal.Width")], 
+     col = kmeansmodel$cluster, 
+     main = "Sepal Length and Petal Width")
+
+# petal length and sepal width
+plot(nosp_iris[c("Petal.Length", "Sepal.Width")], 
+     col = kmeansmodel$cluster, 
+     main = "Petal Length and Sepal Width")
+
+# From just looking at it, seems like petal length and petal width has the least overlap
+```
+Check for Best k (# of Clusters) to Use Using Elbow Method
+
+```{r}
+# Best k value (center) to use for petal length and petal width (test out with for loop)
+# Using Elbow Method: Check graph of total distance vs k (# clusters) and wherever it stops having drastic change is where the best k is
+# total within distance of kmeans model is denoted with withinss
+
+suppressWarnings ( {
+ratios <- list()
+
+for (k in 1:15) {
+  kmeansmodel <- kmeans(nosp_iris, centers = k, nstart = 30, algorithm = "Lloyd")
+  ratios <- append(ratios, kmeansmodel$tot.withinss)
+  
+}
+
+par(mfrow=c(1,1))
+plot(1:15, ratios, xlab = "k-value", ylab = "Total Distance", type="b")
+
+})
+
+
+# From the graph, seems like the best k to use is 3 (where the elbow bends)
+```
+Using Silhouette, Sum of Squares, Confusion Matrix for Evaluation
+```{r}
+# Determine how good this model is with k = 3
+
+# To get a numeric understanding of how good it is, will use the sihouette method
+# The sihouette method measures quality of clustering by determing how well each object lies within its cluster
+# A high average sihouette width indicates good clustering. 
+suppressWarnings ( {
+kmeansmodel <- kmeans(nosp_iris, centers = 3, nstart = 30, algorithm = "Lloyd")
+})
+s <- silhouette(kmeansmodel$cluster, dist(nosp_iris))
+avg_s <- mean(s[,3]) # 3 is to index towards the sihouette values
+
+print(paste("The average silhouette value of k = 3 is", avg_s, "and as the sihouette value > 0.5, it indicates reasonably good clustering at predicting flower type"))
+
+# Sum of squares (evaluation)
+kmeansmodel$withinss
+
+# Confusion matrix (evaluation)
+table(data$Species, kmeansmodel$cluster)
+```
+
