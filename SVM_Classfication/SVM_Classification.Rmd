@@ -1,0 +1,164 @@
+---
+title: "HW1"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+**Question 2.1**
+
+```{r}
+# Describe a situation or problem from your job, everyday life, current events, etc., for which a classification model would be appropriate. List some (up to 5) predictors that you might use
+
+### OUR ANSWER ###
+# Problem: Recommend products to users based on their purchase history and browsing history.
+
+# Classification Model: KNN
+
+# Predictors:
+
+  # I. Categories: Identify customer preferences using their purchase and browsing histories, ensuring recommendations align with their interests.
+
+  # II. View History: Track products that capture user attention for potential future purchases.
+
+  # III. Shopping Cart: Items in the cart highlight the user's primary product interests and purchase intentions.
+
+  # IV. Purchase History: Reveals the specific products previously bought by the customer.
+
+  # V. Customer Reviews: Use user ratings to filter out products that don't meet their satisfaction.
+
+# Operation: 
+  #•	Build a customer dataset with the predictors above.
+  #•	Filter out products and categories not favored by the target customers, based on user ratings and category preferences. 
+  #•	Identify users with similar tastes in categories and purchased products.
+  #•	Recommend products purchased by similar users and products of interest to target customers.
+
+```
+
+**Packages and Import Data**
+
+```{r}
+library("kernlab")
+library("kknn")
+print("Packages Imported")
+
+# import the "credit_card_data.txt" file in
+data <- read.table("credit_card_data.txt")
+print(data)
+```
+
+**Question 2.2.1 SVM Model**
+
+```{r}
+# call ksvm. Vanilladot is a simple linear kernel.
+# convert to matrix form
+svm_model <- ksvm(as.matrix(data[,1:10]),as.factor(data[,11]),type="C-svc",kernel="vanilladot",C=100,scaled=TRUE)
+
+# data[vertical index, horizontal index]
+# data[,11] is the binary response variable (Yes credit or No credit)
+# the lambda term in SVM for trade-offs is the C value
+# the challenge is to find an adequate C that works well for the model
+# C-svc is C for support vector classifier
+
+# calculate a1…am
+a <- colSums(svm_model@xmatrix[[1]] * svm_model@coef[[1]])
+a
+
+# calculate a0
+a0 <- -svm_model@b 
+a0
+
+# see what the model predicts
+pred <- predict(svm_model,data[,1:10])
+pred
+
+# see what fraction of the model’s predictions match the actual classification
+sum(pred == data[,11]) / nrow(data)
+
+# summarize what we found to an equation of our classifier
+equation <- paste("(", a[1], "* V1) + ", "(", a[2], "* V2) + ", "(", a[3], "* V3) + ", "(", a[4], "* V4) + ", "(", a[5], "* V5) + ", "(", a[6], "* V6) + ", "(", a[7], "* V7) + ", "(", a[8], "* V8) + ", "(", a[9], "* V9) + ", "(", a[10], "* V10) + ", a0, "= 0")
+equation
+```
+
+**Question 2.2.2 rbf Model & polydot Model**
+
+```{r}
+# call svm using rbfdot, which is a radius basis kernel "Gaussian"
+rbf_model <- ksvm(as.matrix(data[,1:10]),as.factor(data[,11]),type='C-svc', kernel="rbfdot", C=100,scaled=TRUE)
+rbf_model
+
+# calculate a1…am for rbfdot model
+a1_rbf <- colSums(rbf_model@xmatrix[[1]] * rbf_model@coef[[1]])
+a1_rbf
+
+# calculate a0 for rbfdot model
+a0_rbf <- -rbf_model@b 
+a0_rbf
+
+# see what the rbfdot model predicts
+rbfdot_pred <- predict(rbf_model,data[,1:10])
+rbfdot_pred
+
+# see what fraction of the model’s predictions match the actual classification
+# --> gives out a HIGH estimate of accuracy rate of 95.26%
+sum(rbfdot_pred == data[,11]) / nrow(data)
+```
+
+```{r}
+# call svm using polydot, which is a polynomial kernel
+polydot_model <- ksvm(as.matrix(data[,1:10]),as.factor(data[,11]),type='C-svc', kernel="polydot", C=100,scaled=TRUE)
+polydot_model
+
+# calculate a1…am for polydot model
+a1_polydot <- colSums(polydot_model@xmatrix[[1]] * polydot_model@coef[[1]])
+a1_polydot
+
+# calculate a0 for polydot model
+a0_polydot <- -polydot_model@b 
+a0_polydot
+
+# see what the polydot model predicts
+polydot_pred <- predict(polydot_model,data[,1:10])
+polydot_pred
+
+# see what fraction of the model’s predictions match the actual classification
+# --> gives out an estimate of accuracy rate of 86.39%
+sum(polydot_pred == data[,11]) / nrow(data)
+```
+
+**Question 3**
+
+```{r}
+# Code Referenced from StackOverflow topic ("How to predict in kknn function? library(kknn)") by vcai01 (URL: https://stackoverflow.com/questions/57649227/how-to-predict-in-kknn-function-librarykknn)
+
+accuracy <- array(0, 20)
+# loop through k values
+for (k_val in 1:20) {
+  # use array to set a predictor including all data points
+  predictor <- array(0, (nrow(data)))
+  # loop through data points to check how well the classification are for each
+  for (i in 1:nrow(data)) { 
+    # data[-i ] is the data predictors without current i (training)
+    train_data <- data[-i, ]
+    # data[i, ] is the data predictors with current i (validation)
+    validation_data <- data[i, ]
+    # V11~. means we are using all variables other than V11(the binary response variable) for model formula
+    knn_model <- kknn(formula = V11~., train = train_data, test = validation_data, kernel = "optimal", k = k_val, scale = TRUE)
+    # add to predictor the predicted vals from the model and round to 1 or 0 to be compared to with data[,11]
+    predictor[i] <- round(predict(knn_model), 0) 
+  }
+  # check to see how accurate predictor is to actual response
+  accuracy[k_val] <- sum(predictor == data[, 11])/nrow(data) 
+}
+
+# loop through i to print out accuracy rate for each k value
+for (i in 1:length(accuracy)) {
+  outputstr = paste("Value of k at ", i, " has ", round(accuracy[i]*100, 5), "% Accuracy", sep = "" )
+  print(outputstr)
+}
+
+# summarize to get our best k value 
+bestacc = paste("The optimal accuracy for classifying data points in the full data set is ", round(max(accuracy)*100, 5), "% at a value of k equals ", which.max(accuracy), sep = "")
+print(bestacc)
+
+```
