@@ -1,0 +1,117 @@
+---
+title: "HW 10.1 (a)"
+author: "Yu Fung David Wang"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+
+Read in Data and Packages
+```{r}
+library("tree")
+crimedata <- read.table("uscrime.txt", header = TRUE)
+
+crimedata
+set.seed(1234)
+
+```
+
+Split Data into Train, Validation, and Test 
+```{r}
+splitSample <- sample(1:3, size = nrow(crimedata), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+
+crimedata.train <- crimedata[splitSample == 1,]
+crimedata.val <- crimedata[splitSample == 2,]
+crimedata.test <- crimedata[splitSample ==3,]
+
+```
+
+Training the Regression Decision Tree
+```{r}
+# Predicting Crime Rates
+
+# Model 1: Crime Rate Based on Income Inequality and Wealth
+reg_tree1 <- tree(Crime~Ineq+Wealth, crimedata.train)
+plot(reg_tree1)
+text(reg_tree1, pretty = 0)
+
+# Model 2: Crime Rate Based on Unemployment Rates and Population
+reg_tree2 <- tree(Crime~U1+U2+Pop, crimedata.train)
+plot(reg_tree2)
+text(reg_tree2, pretty = 0)
+
+# Model 3: Crime Rate Based on Previous Crime History (Prob of Imprisonment)
+reg_tree3 <- tree(Crime~Prob, crimedata.train)
+plot(reg_tree3)
+text(reg_tree3, pretty = 0)
+
+# Model 4: Crime Rate Based on Expenditure on Police Protection
+reg_tree4 <- tree(Crime~Po1+Po2, crimedata.train)
+plot(reg_tree4)
+text(reg_tree4, pretty = 0)
+
+# Model 5: Crime Rate Based on Presence of Males
+reg_tree5 <- tree(Crime~M+M.F, crimedata.train)
+plot(reg_tree5)
+text(reg_tree5, pretty = 0)
+
+# Model Baseline: ALL to Predict Crime Rate (use this as a baseline)
+reg_treeB <- tree(Crime~., crimedata.train)
+plot(reg_treeB)
+text(reg_treeB, pretty = 0)
+```
+Validating Tree Models
+
+```{r}
+# MSE scores for evaluation (Mean Squared Error)
+# Model 1
+val_tree1 <- predict(reg_tree1, crimedata.val)
+val_tree1_MSE <- mean((crimedata.val$Crime - val_tree1)^2)
+
+paste("Model 1: Income Inequality/Wealth", val_tree1_MSE)
+
+# Model 2
+val_tree2 <- predict(reg_tree2, crimedata.val)
+val_tree2_MSE <- mean((crimedata.val$Crime - val_tree2)^2)
+
+paste("Model 2: Unemployment Rate/Population", val_tree2_MSE)
+
+# Model 3
+val_tree3 <- predict(reg_tree3, crimedata.val)
+val_tree3_MSE <- mean((crimedata.val$Crime - val_tree3)^2)
+
+paste("Model 3: Previous Crime History", val_tree3_MSE)
+
+# Model 4
+val_tree4 <- predict(reg_tree4, crimedata.val)
+val_tree4_MSE <- mean((crimedata.val$Crime - val_tree4)^2)
+
+paste("Model 4: Police Expenditure", val_tree4_MSE)
+
+# Model 5
+val_tree5 <- predict(reg_tree5, crimedata.val)
+val_tree5_MSE <- mean((crimedata.val$Crime - val_tree5)^2)
+
+paste("Model 5: Presence of Males", val_tree5_MSE)
+
+# Model Baseline
+val_treeB <- predict(reg_treeB, crimedata.val)
+val_treeB_MSE <- mean((crimedata.val$Crime - val_treeB)^2)
+
+paste("Baseline Model: All Features", val_treeB_MSE)
+```
+From the looks of it, even though the MSE for all models are high, when compared to the baseline of all factors in the regression, the model of Crime Rate Based on Previous Per Capita Expenditure on Police Protection seems to have performed the most optimally. Henceforth, we will get the performance (MSE) of the model (reg_tree4) on the test set. 
+
+```{r}
+# Model 4 (Previous Crime History)
+crime_model_test <- predict(reg_tree4, crimedata.test)
+crime_model_MSE <- mean((crimedata.val$Crime - crime_model_test)^2)
+
+paste("Final Model Score in MSE:", crime_model_MSE)
+```
+
+The reason why Previous Per Capita Expenditure on Police Protection Model performed the best may be because it provides a historical estimate of a feature that is closely related to crime rates: police spending. It makes sense that the more spent on police protection, the more dangerous/vulnerable to crime a area is. 
+
+The per capita expenditure is the total expenditure divided by the total population of a given economy, hence the higher the number, it means that individuals of the population are spending more on police protection. By spending more on police protection, it is because civilians most likely suspect a higher rate of crime in the area. 
