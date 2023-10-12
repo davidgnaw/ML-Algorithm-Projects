@@ -1,0 +1,41 @@
+---
+title: "HW 10.1"
+author: "Yu Fung David Wang"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+
+
+10.1 (b)
+```{r}
+library(randomForest) 
+# import the dataset
+crime_dataset <- read.table("uscrime.txt", header = TRUE)
+crime_dataset
+# set train and test dataset, 70% as train, 30% as test
+train <- sample(1:nrow(crime_dataset), size = floor(0.7*nrow(crime_dataset)), replace = FALSE, prob = rep(1/nrow(crime_dataset), nrow(crime_dataset))) 
+train
+crime_train <- crime_dataset[train,] # train
+crime_test <- crime_dataset[-train,] # test
+crime_train
+crime_test
+# Setup the random forest model
+rf_model <- randomForest(Crime~., data = crime_train, importance=TRUE)
+print(rf_model)
+# get the importance of each independent variable
+importance(rf_model)
+# using graph show the importance of each independent variable
+varImpPlot(rf_model, main = "Variable importance in Randon Forest")
+# predict
+predict_rf <- predict(rf_model, crime_test)
+predict_rf
+RMSE_rf <- sqrt(mean((crime_test$Crime-predict_rf)^2))
+RMSE_rf
+# plot the Random Forest's R^2 and RMSE
+par(mfrow=c(2, 1))
+plot(RMSE_rf, main="Random Forest's RMSE")
+```
+This is a random forest regression model with 500 trees. Each split has a random subset of 5 variables considered.  34.17% of the variability in crime was explained by the random forest.  The variable that is most important is Po1 and in relative importance, the others are U2, M, Wealth, and Pop.  Po1 is police expenditure, which supports the result from the above tree in section 10.1.  Police expenditures also account for the highest %IncMSE and IncNodePurity.  This highly suggests that police expenditures have a large impact on crime rates.  The next best model is previous crime history, which is also the second best model in the trees above.  The RMSE is 186.85, which is more accurate than the trees above.  Thus, the random forest outperforms the regression tree models. 
