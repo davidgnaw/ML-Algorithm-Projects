@@ -1,0 +1,101 @@
+---
+title: "HW4"
+author: "Yu Fung David Wang"
+output:
+  html_document:
+    df_print: paged
+---
+
+**HW4: 5.1**
+
+Set Up Packages and Data
+```{r}
+
+library(outliers)
+crime_data <- read.table("uscrime.txt")
+head(crime_data)
+nrow(crime_data)
+
+```
+
+Run the Grubbs Test on Data
+```{r}
+# We only care about the last column (# of crimes per 100,000 people)
+crimesperppl <- as.numeric(crime_data$V16[2:nrow(crime_data)])
+
+# Check for (highest value outlier
+hivalue_outlier_test <- grubbs.test(crimesperppl)
+hivalue_outlier_test
+
+# Check for lowest value outlier
+lowvalue_outlier_test <- grubbs.test(crimesperppl, opposite = TRUE)
+lowvalue_outlier_test
+```
+Based on the Grubbs Outlier Test, we see that both p-values of the highest (p-val = 0.07887) and lowest (p-val = 1) values are both greater than 0.05 (at the 5% significance level), so we fail to reject the grubbs test for one outlier hypothesis that the highest and lowest values are not outliers. Thus, the null hypothesis holds and the alternative hypothesis do not hold. Hence, the highest and lowest values of 1993 and 342 are not outliers in the number of crimes per 100,000 people.
+
+
+**HW4 8.2**
+
+Set Up Data
+```{r}
+
+crime2_data <- read.table("uscrime2.txt", header = TRUE)
+head(crime2_data)
+nrow(crime2_data)
+
+```
+Fit Linear Model
+- We want to find "Crime" in the data of unpredicted points hence, we want the formula to be the a linear combination of the other independent variables
+- Will check a summary of the fitted model to see the factors used, coefficients of the model, and quality of fit (adjusted R-squared value)
+```{r}
+crime_lm <- lm(formula =  Crime ~ M + So + Ed + Po1 + Po2 + LF + M.F + Pop + NW + U1 + U2 + Wealth + Ineq + Prob + Time,
+                  data = crime2_data)
+
+summary(crime_lm) # factors and coefficient of the model
+
+```
+
+
+We can see the given intercepts for each variable, now with the given model, we can use the given data to predict crime rate in the new city
+
+
+```{r}
+# Predict crime rate of the new city
+new_crimedata <- data.frame(M = 14.0,
+So = 0,
+Ed = 10.0,
+Po1 = 12.0,
+Po2 = 15.5,
+LF = 0.640,
+M.F = 94.0,
+Pop = 150,
+NW = 1.1,
+U1 = 0.120,
+U2 = 3.6,
+Wealth = 3200,
+Ineq = 20.1,
+Prob = 0.04,
+Time = 39.0)
+
+predict(object = crime_lm, newdata = new_crimedata)
+```
+
+Based on the linear regression model, the new data will have a crime rate of 155.4349 crimes per 100,000 people. 
+
+Finally, here is a software output of the linear regression graph based on fitted values by the model and the true values
+
+```{r}
+plot(x = crime2_data$Crime,
+     y = crime_lm$fitted.values,
+     xlab = "True Vals",
+     ylab = "Model Fitted Vals",
+     main = "Crime Rate Based on Regression")
+
+# also add the linear regression line
+abline(b = 1, a = 0)
+
+# add the R^2 value (goodness of fit too)
+legend("topleft", legend = paste("R2:", format(summary(crime_lm)$adj.r.squared,digits=3)))
+```
+
+
